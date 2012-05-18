@@ -1,26 +1,67 @@
 
 (in-package :xml-class)
 
+(defclass standard-xml-class ()
+  ((document :initarg :document :reader document))
+  (:documentation "Topmost object of every instance with the XML-CLASS metaclass")
+  (:default-initargs :document nil))
+
 (defclass xml-class (closer-mop:standard-class)
-  ())
+  ()
+  (:documentation "Meta-class for classes associated with XML documents"))
 
 (defmethod closer-mop:validate-superclass ((sub xml-class)
                                            (super closer-mop:standard-class))
   t)
 
 (defclass xml-direct-slot-definition (closer-mop:standard-direct-slot-definition)
-  ((xpath :reader xpath
-          :initarg :xpath)
-   (xml-type :reader xml-type
-             :initarg :xml-type))
+  ((xpath :reader xpath :initarg :xpath)
+   (xml-type :reader xml-type :initarg :xml-type))
   (:default-initargs :xml-type nil))
 
 (defclass xml-effective-slot-definition (closer-mop:standard-effective-slot-definition)
-  ((xpath :reader xpath
-          :initarg :xpath)
-   (xml-type :reader xml-type
-             :initarg :xml-type))
+  ((xpath :reader xpath :initarg :xpath)
+   (xml-type :reader xml-type :initarg :xml-type))
   (:default-initargs :xml-type nil))
+
+(defmethod initialize-instance :around
+    ((class xml-class) &rest initargs
+                       &key direct-superclasses)
+  (declare (dynamic-extent initargs))
+  (if (loop for class in direct-superclasses
+            thereis (subtypep class (find-class 'standard-xml-class)))
+      ;; 'standard-xml-class is already one of the (indirect) superclasses
+      (call-next-method)
+      
+      ;; 'standard-xml-class is not one of the superclasses, so we have to add it
+      (apply #'call-next-method
+            class
+            :direct-superclasses
+            (append direct-superclasses
+                    (list (find-class 'standard-xml-class)))
+            initargs)))
+
+(defmethod reinitialize-instance :around
+  ((class xml-class) &rest initargs
+                     &key (direct-superclasses '() direct-superclasses-p))
+  (declare (dynamic-extent initargs))
+  (if direct-superclasses-p
+      
+      ;; if direct superclasses are explicitly passed
+      ;; this is exactly like above
+      (if (loop for class in direct-superclasses
+                thereis (subtypep class (find-class 'standard-xml-class)))
+          (call-next-method)
+          (apply #'call-next-method
+                 class
+                 :direct-superclasses
+                 (append direct-superclasses
+                         (list (find-class 'standard-xml-class)))
+                 initargs))
+      
+      ;; if direct superclasses are not explicitly passed
+      ;; we _must_ not change anything
+      (call-next-method)))
 
 (defmethod closer-mop:direct-slot-definition-class ((class xml-class)
                                                     &key xpath &allow-other-keys)
@@ -53,15 +94,12 @@
             (slot-value xml-direct-slot-definition 'xml-type)))
     effective-slot-definition))
 
-(defclass xml-object ()
-  ((document :initarg :document
-             :reader document))
-  (:documentation "Topmost object of every instance with the XML-CLASS metaclass")
-  (:default-initargs :document nil))
+;;;
+;;; Now back to STANDARD-XML-CLASS
 
-(defmethod initialize-instance :before ((xml-object xml-object) &key document)
+(defmethod initialize-instance :before ((standard-xml-class standard-xml-class) &key document)
   (when document
-    (restore-instance document xml-object)))
+    (restore-instance document standard-xml-class)))
 
 (defgeneric process-node (type node)
   (:documentation "Parse a string into the given type"))
@@ -102,15 +140,16 @@
 (defmethod process-node ((type (eql 'date-time)) node)
   (local-time:parse-timestring (xpath:string-value node)))
 
-(defun restore-instance (document xml-object)
-  (dolist (slot-definition (closer-mop:class-slots (class-of xml-object)))
+(defun restore-instance (document standard-xml-class)
+  (dolist (slot-definition (closer-mop:class-slots (class-of standard-xml-class)))
     (when (and (typep slot-definition 'xml-effective-slot-definition)
                (slot-boundp slot-definition 'xpath))
-      (setf (slot-value xml-object (closer-mop:slot-definition-name slot-definition))
+      (setf (slot-value standard-xml-class (closer-mop:slot-definition-name slot-definition))
             (process-node (closer-mop:slot-definition-type slot-definition)
                           (xpath:evaluate (slot-value slot-definition 'xpath) document)))))
-  xml-object)
+  standard-xml-class)
 
+;;; Updating XML objects. This is totally untested.
 (defgeneric unparse-object (type object))
 
 (defmethod unparse-object ((type t) object)
@@ -172,3 +211,4 @@
      (document instance)
      (slot-value slot-definition 'xpath)
      (unparse-object (closer-mop:slot-definition-type slot-definition) object))))
+
