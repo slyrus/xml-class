@@ -2,13 +2,13 @@
 (in-package :xml-class)
 
 (defclass standard-xml-class ()
-  ((document :initarg :document :reader document))
+  ((node :initarg :node :reader node))
   (:documentation "Topmost object of every instance with the XML-CLASS metaclass")
-  (:default-initargs :document nil))
+  (:default-initargs :node nil))
 
 (defclass xml-class (closer-mop:standard-class)
   ()
-  (:documentation "Meta-class for classes associated with XML documents"))
+  (:documentation "Meta-class for classes associated with XML nodes"))
 
 (defmethod closer-mop:validate-superclass ((sub xml-class)
                                            (super closer-mop:standard-class))
@@ -97,9 +97,9 @@
 ;;;
 ;;; Now back to STANDARD-XML-CLASS
 
-(defmethod initialize-instance :before ((standard-xml-class standard-xml-class) &key document)
-  (when document
-    (restore-instance document standard-xml-class)))
+(defmethod initialize-instance :before ((standard-xml-class standard-xml-class) &key node)
+  (when node
+    (restore-instance node standard-xml-class)))
 
 (defgeneric process-node (type node)
   (:documentation "Parse a string into the given type"))
@@ -140,13 +140,13 @@
 (defmethod process-node ((type (eql 'date-time)) node)
   (local-time:parse-timestring (xpath:string-value node)))
 
-(defun restore-instance (document standard-xml-class)
+(defun restore-instance (node standard-xml-class)
   (dolist (slot-definition (closer-mop:class-slots (class-of standard-xml-class)))
     (when (and (typep slot-definition 'xml-effective-slot-definition)
                (slot-boundp slot-definition 'xpath))
       (setf (slot-value standard-xml-class (closer-mop:slot-definition-name slot-definition))
             (process-node (closer-mop:slot-definition-type slot-definition)
-                          (xpath:evaluate (slot-value slot-definition 'xpath) document)))))
+                          (xpath:evaluate (slot-value slot-definition 'xpath) node)))))
   standard-xml-class)
 
 ;;; Updating XML objects. This is totally untested.
@@ -164,7 +164,7 @@
 (defmethod unparse-object ((type (eql 'keyword)) object)
   (string-downcase object))
 
-(defun update-xpath-in-document (document xpath string)
+(defun update-xpath-in-node (node xpath string)
   (flet
       ((update-node (node value)
          (etypecase node
@@ -173,16 +173,16 @@
            (stp:element
             (stp:delete-children node)
             (stp:append-child node (stp:make-text value))))))
-    (let ((nodes (xpath:all-nodes (xpath:evaluate xpath document))))
+    (let ((nodes (xpath:all-nodes (xpath:evaluate xpath node))))
       (cond
         ((null nodes)
          ;; no node found, create it
-         (let ((node document))
+         (let ((node node))
            (dolist (component (cl-ppcre:split #\/ xpath))
              (cond
                ((eql #\@ (char component 0))
                 (setf (stp:attribute-value node (subseq component 1)) string)
-                (return-from update-xpath-in-document document))
+                (return-from update-xpath-in-node node))
                (t
                 (setf node (or (let ((children (stp:filter-children (stp:of-name component) node)))
                                  (when children
@@ -197,7 +197,7 @@
          (error "more than one node unexpectedly matches XPath ~S" xpath))
         (t
          (update-node (first nodes) string)))))
-  document)
+  node)
 
 (defmethod (setf closer-mop:slot-value-using-class)
     :after
@@ -205,10 +205,10 @@
      (class xml-class)
      instance
      (slot-definition xml-effective-slot-definition))
-  (when (and (slot-boundp instance 'document)
+  (when (and (slot-boundp instance 'node)
              (slot-boundp slot-definition 'xpath))
-    (update-xpath-in-document
-     (document instance)
+    (update-xpath-in-node
+     (node instance)
      (slot-value slot-definition 'xpath)
      (unparse-object (closer-mop:slot-definition-type slot-definition) object))))
 

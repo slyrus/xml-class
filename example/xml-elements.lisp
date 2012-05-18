@@ -10,7 +10,7 @@
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'maxbondorder)) node)
-  (make-instance 'maxbondorder :document node))
+  (make-instance 'maxbondorder :node node))
 
 (defmethod process-node ((type (eql '(cons maxbondorder))) node)
   (xpath:map-node-set->list (lambda (x)
@@ -24,7 +24,7 @@
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'radius)) node)
-  (make-instance 'radius :document node))
+  (make-instance 'radius :node node))
 
 (defmethod process-node ((type (eql '(cons radius))) node)
   (xpath:map-node-set->list (lambda (x)
@@ -37,7 +37,7 @@
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'radii)) node)
-  (make-instance 'radii :document node))
+  (make-instance 'radii :node node))
 
 (defmethod process-node ((type (eql '(cons radii))) node)
   (xpath:map-node-set->list (lambda (x)
@@ -49,7 +49,7 @@
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'electronegativity)) node)
-  (make-instance 'electronegativity :document node))
+  (make-instance 'electronegativity :node node))
 
 (defmethod process-node ((type (eql '(cons electronegativity))) node)
   (xpath:map-node-set->list (lambda (x)
@@ -63,7 +63,7 @@
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'rgb)) node)
-  (make-instance 'rgb :document (xpath:first-node node)))
+  (make-instance 'rgb :node (xpath:first-node node)))
 
 (defclass element ()
   ((atomic-number :accessor atomic-number :xpath "attribute::atomicnumber"
@@ -83,7 +83,7 @@
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'element)) node)
-  (make-instance 'element :document node))
+  (make-instance 'element :node node))
 
 (defmethod process-node ((type (eql '(vector element))) node)
   (let ((elements (xpath:map-node-set->list
@@ -103,7 +103,7 @@
 
 (defparameter *elements*
   (make-instance 'elements
-                 :document *elements-document*))
+                 :node *elements-document*))
 
 (defparameter *element-by-atomic-number-hash*
   (let ((h (make-hash-table)))
