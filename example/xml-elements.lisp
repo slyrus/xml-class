@@ -4,7 +4,7 @@
 
 (in-package :xml-elements)
 
-(defclass maxbondorder (xml-object)
+(defclass maxbondorder ()
   ((source :accessor source :xpath "attribute::source" :type string)
    (bond-order :accessor bond-order :xpath "text()" :type string))
   (:metaclass xml-class))
@@ -17,7 +17,7 @@
                               (process-node 'maxbondorder x))
                             node))
 
-(defclass radius (xml-object)
+(defclass radius ()
   ((radius-type :accessor radius-type :xpath "attribute::type" :type string)
    (unit :accessor unit :xpath "attribute::unit" :type string)
    (value :accessor value :xpath "text()" :type float))
@@ -31,7 +31,7 @@
                               (process-node 'radius x))
                             node))
 
-(defclass radii (xml-object)
+(defclass radii ()
   ((source :accessor source :xpath "attribute::source" :type string)
    (radii :accessor radii :xpath "radius" :type (cons radius)))
   (:metaclass xml-class))
@@ -44,7 +44,7 @@
                               (process-node 'radii x))
                             node))
 
-(defclass electronegativity (xml-object)
+(defclass electronegativity ()
   ((source :accessor source :xpath "attribute::source" :type string))
   (:metaclass xml-class))
 
@@ -56,7 +56,7 @@
                               (process-node 'electronegativity x))
                             node))
 
-(defclass rgb (xml-object)
+(defclass rgb ()
   ((red :accessor rgb :xpath "attribute::red" :type float)
    (blue :accessor rgb :xpath "attribute::blue" :type float)
    (green :accessor rgb :xpath "attribute::green" :type float))
@@ -65,7 +65,7 @@
 (defmethod process-node ((type (eql 'rgb)) node)
   (make-instance 'rgb :document (xpath:first-node node)))
 
-(defclass element (xml-object)
+(defclass element ()
   ((atomic-number :accessor atomic-number :xpath "attribute::atomicnumber"
                   :type integer-or-null)
    (id :accessor id :xpath "attribute::id" :type string)
@@ -92,7 +92,7 @@
                    node)))
     (make-array (length elements) :initial-contents elements)))
 
-(defclass elements (xml-object)
+(defclass elements ()
   ((element-vector :accessor element-vector :xpath "elements/element"
                  :type (vector element)))
   (:metaclass xml-class))
