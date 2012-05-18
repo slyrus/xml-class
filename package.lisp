@@ -4,5 +4,10 @@
   (:export #:xml-class
            #:xml-object
            #:document
-           #:date-time))
+           #:date-time
+           
+           #:process-node
+
+           #:parse
+           #:parse-file))
 

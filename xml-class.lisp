@@ -63,46 +63,38 @@
   (when document
     (restore-instance document xml-object)))
 
-(defgeneric parse-string (type string)
+(defgeneric process-node (type node)
   (:documentation "Parse a string into the given type"))
 
-(defmethod parse-string ((type t) string)
+(defmethod process-node ((type t) node)
   (warn "unknown type ~A specified" type)
-  string)
+  node)
 
-(defmethod parse-string ((type (eql t)) string)
-  string)
+(defmethod process-node ((type (eql t)) node)
+  node)
 
-(defmethod parse-string ((type (eql 'string)) string)
-  string)
+(defmethod process-node ((type (eql 'string)) node)
+  (xpath:string-value node))
 
-(defmethod parse-string ((type (eql 'keyword)) string)
-  (intern (string-upcase string) :keyword))
+(defmethod process-node ((type (eql 'keyword)) node)
+  (intern (string-upcase (xpath:string-value node)) :keyword))
 
-(defmethod parse-string ((type (eql 'integer)) string)
-  (parse-integer string))
+(defmethod process-node ((type (eql 'integer)) node)
+  (parse-integer (xpath:string-value node)))
 
-(defmethod parse-string ((type (eql 'float)) string)
-  (parse-number:parse-number string))
+(defmethod process-node ((type (eql 'float)) node)
+  (parse-number:parse-number (xpath:string-value node)))
 
-(defmethod parse-string ((type (eql 'date-time)) string)
-  (local-time:parse-timestring string))
+(defmethod process-node ((type (eql 'date-time)) node)
+  (local-time:parse-timestring (xpath:string-value node)))
 
 (defun restore-instance (document xml-object)
   (dolist (slot-definition (closer-mop:class-slots (class-of xml-object)))
     (when (and (typep slot-definition 'xml-effective-slot-definition)
                (slot-boundp slot-definition 'xpath))
-      (case (closer-mop:slot-definition-type slot-definition)
-        ((string integer float)
-         (when-let (string
-                    (xpath-find-string document
-                                       (slot-value slot-definition 'xpath)))
-           (setf (slot-value xml-object (closer-mop:slot-definition-name slot-definition))
-                 (parse-string (closer-mop:slot-definition-type slot-definition)
-                               (string-trim '(#\Space #\Return #\LineFeed) string)))))
-        (t
-         (setf (slot-value xml-object (closer-mop:slot-definition-name slot-definition))
-               (xpath:evaluate (slot-value slot-definition 'xpath) document))))))
+      (setf (slot-value xml-object (closer-mop:slot-definition-name slot-definition))
+            (process-node (closer-mop:slot-definition-type slot-definition)
+                          (xpath:evaluate (slot-value slot-definition 'xpath) document)))))
   xml-object)
 
 (defgeneric unparse-object (type object))
