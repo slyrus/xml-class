@@ -67,7 +67,7 @@
   (:documentation "Parse a string into the given type"))
 
 (defmethod process-node ((type t) node)
-  (warn "unknown type ~A specified" type)
+  (warn "process-node: unknown type ~A specified" type)
   node)
 
 (defmethod process-node ((type (eql t)) node)
@@ -82,8 +82,22 @@
 (defmethod process-node ((type (eql 'integer)) node)
   (parse-integer (xpath:string-value node)))
 
+(deftype integer-or-null () '(or integer null))
+
+(defmethod process-node ((type (eql 'integer-or-null)) node)
+  (let ((string (xpath:string-value node)))
+    (when (and string (plusp (length string)))
+      (parse-integer string))))
+
+(deftype float-or-null () '(or float null))
+
 (defmethod process-node ((type (eql 'float)) node)
   (parse-number:parse-number (xpath:string-value node)))
+
+(defmethod process-node ((type (eql 'float-or-null)) node)
+  (let ((string (xpath:string-value node)))
+    (when (and string (plusp (length string)))
+      (parse-number:parse-number string))))
 
 (defmethod process-node ((type (eql 'date-time)) node)
   (local-time:parse-timestring (xpath:string-value node)))

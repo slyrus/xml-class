@@ -1,7 +1,10 @@
 
 (defpackage :xml-class
   (:use :cl :alexandria)
-  (:export #:xml-class
+  (:export #:integer-or-null
+           #:float-or-null
+
+           #:xml-class
            #:xml-object
            #:document
            #:date-time
