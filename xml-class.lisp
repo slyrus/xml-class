@@ -15,14 +15,10 @@
   t)
 
 (defclass xml-direct-slot-definition (closer-mop:standard-direct-slot-definition)
-  ((xpath :reader xpath :initarg :xpath)
-   (xml-type :reader xml-type :initarg :xml-type))
-  (:default-initargs :xml-type nil))
+  ((xpath :reader xpath :initarg :xpath)))
 
 (defclass xml-effective-slot-definition (closer-mop:standard-effective-slot-definition)
-  ((xpath :reader xpath :initarg :xpath)
-   (xml-type :reader xml-type :initarg :xml-type))
-  (:default-initargs :xml-type nil))
+  ((xpath :reader xpath :initarg :xpath)))
 
 (defmethod initialize-instance :around
     ((class xml-class) &rest initargs
@@ -89,9 +85,7 @@
                    direct-slot-definitions)))
     (when xml-direct-slot-definition
       (setf (slot-value effective-slot-definition 'xpath)
-            (slot-value xml-direct-slot-definition 'xpath))
-      (setf (slot-value effective-slot-definition 'xml-type)
-            (slot-value xml-direct-slot-definition 'xml-type)))
+            (slot-value xml-direct-slot-definition 'xpath)))
     effective-slot-definition))
 
 ;;;
