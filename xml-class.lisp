@@ -7,7 +7,7 @@
   (:default-initargs :node nil))
 
 (defclass xml-class (closer-mop:standard-class)
-  ()
+  ((xpath :initarg :xpath :accessor xpath))
   (:documentation "Meta-class for classes associated with XML nodes"))
 
 (defmethod closer-mop:validate-superclass ((sub xml-class)
@@ -20,14 +20,27 @@
 (defclass xml-effective-slot-definition (closer-mop:standard-effective-slot-definition)
   ((xpath :reader xpath :initarg :xpath)))
 
+(defun remove-keyword-arg (arglist akey)
+  (let ((mylist arglist)
+	(newlist ()))
+    (labels ((pop-arg (alist)
+	       (let ((arg (pop alist))
+		     (val (pop alist)))
+		 (unless (equal arg akey)
+		   (setf newlist (append (list arg val) newlist)))
+		 (when alist (pop-arg alist)))))
+      (pop-arg mylist))
+    newlist))
+
 (defmethod initialize-instance :around
     ((class xml-class) &rest initargs
-                       &key direct-superclasses)
+                       &key direct-superclasses xpath)
   (declare (dynamic-extent initargs))
+  (setf (xpath class) (car xpath))
   (if (loop for class in direct-superclasses
             thereis (subtypep class (find-class 'standard-xml-class)))
       ;; 'standard-xml-class is already one of the (indirect) superclasses
-      (call-next-method)
+      (call-next-method (remove-keyword-arg initargs :xpath))
       
       ;; 'standard-xml-class is not one of the superclasses, so we have to add it
       (apply #'call-next-method
@@ -35,29 +48,31 @@
             :direct-superclasses
             (append direct-superclasses
                     (list (find-class 'standard-xml-class)))
-            initargs)))
+            (remove-keyword-arg initargs :xpath))))
 
 (defmethod reinitialize-instance :around
   ((class xml-class) &rest initargs
-                     &key (direct-superclasses '() direct-superclasses-p))
+                     &key (direct-superclasses '() direct-superclasses-p)
+                          xpath)
   (declare (dynamic-extent initargs))
+  (setf (xpath class) (car xpath))
   (if direct-superclasses-p
       
       ;; if direct superclasses are explicitly passed
       ;; this is exactly like above
       (if (loop for class in direct-superclasses
                 thereis (subtypep class (find-class 'standard-xml-class)))
-          (call-next-method)
+          (call-next-method (remove-keyword-arg initargs :xpath))
           (apply #'call-next-method
                  class
                  :direct-superclasses
                  (append direct-superclasses
                          (list (find-class 'standard-xml-class)))
-                 initargs))
+                 (remove-keyword-arg initargs :xpath)))
       
       ;; if direct superclasses are not explicitly passed
       ;; we _must_ not change anything
-      (call-next-method)))
+      (call-next-method (remove-keyword-arg initargs :xpath))))
 
 (defmethod closer-mop:direct-slot-definition-class ((class xml-class)
                                                     &key xpath &allow-other-keys)
@@ -92,8 +107,12 @@
 ;;; Now back to STANDARD-XML-CLASS
 
 (defmethod initialize-instance :before ((standard-xml-class standard-xml-class) &key node)
-  (when node
-    (restore-instance node standard-xml-class)))
+  (let ((xpath (xpath (class-of standard-xml-class))))
+    (when node
+      (restore-instance (if xpath
+                            (xpath:first-node (xpath:evaluate xpath node))
+                            node)
+                        standard-xml-class))))
 
 (defgeneric process-node (type node)
   (:documentation "Parse a string into the given type"))
