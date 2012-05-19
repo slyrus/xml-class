@@ -65,6 +65,20 @@
 (defmethod process-node ((type (eql 'rgb)) node)
   (make-instance 'rgb :node (xpath:first-node node)))
 
+(defclass isotope ()
+  ((mass :accessor mass :xpath "attribute::mass" :type integer-or-null)
+   (abundance-error :accessor abundance-error :xpath "attribute::abundanceerror" :type integer-or-null)
+   (abundance :accessor abundance :xpath "attribute::abundance" :type float-or-null))
+  (:metaclass xml-class))
+
+(defmethod process-node ((type (eql 'isotope)) node)
+  (make-instance 'isotope :node node))
+
+(defmethod process-node ((type (eql '(cons isotope))) node)
+  (xpath:map-node-set->list (lambda (x)
+                              (process-node 'isotope x))
+                            node))
+
 (defclass element ()
   ((atomic-number :accessor atomic-number :xpath "attribute::atomicnumber"
                   :type integer-or-null)
@@ -79,7 +93,9 @@
    (mass :accessor mass :xpath "mass" :type float-or-null)
    (electronegativity-list :accessor electronegativity-list :xpath "electronegativity"
                            :type (cons electronegativity))
-   (rgb :accessor rgb :xpath "rgb" :type rgb))
+   (rgb :accessor rgb :xpath "rgb" :type rgb)
+   (isotope-list :accessor isotope-list :xpath "isotopes/isotope"
+               :type (cons isotope)))
   (:metaclass xml-class))
 
 (defmethod process-node ((type (eql 'element)) node)
